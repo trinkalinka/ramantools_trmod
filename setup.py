@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "ramantools",
-    version = "0.3.3",
+    name = "ramantools_trmod",
+    version = "0.3.3.b",
     packages = find_packages(),
     # python_requires='>=3.10',
     install_requires = [
