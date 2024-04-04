@@ -106,7 +106,7 @@ class ramanmap:
 		ax1.axes.title.set_size(10)
 		pl.tight_layout()
 
-	def remove_bg(self, mode = 'const', fitmask = None, height = None, width = None, **kwargs):
+	def remove_bg(self, mode = 'const', submin = False, fitmask = None, height = None, width = None, **kwargs):
 		"""Remove the background of Raman maps.
 		It takes the same optional arguments as :func:`bgsubtract`.
 		Default fit function is a first order polynomial. This can be changed by the ``polyorder`` parameter.
@@ -178,21 +178,30 @@ class ramanmap:
 			else:
 				spectofit = self.mapxr.sel(width = width, height = height, method = 'nearest')
 
-			# check for fitmask
-			if fitmask is None:
-				# take the spectrum at the middle of the map and fit the background
-				spectofit = middle
-				_, bg_values, coeff, _, mask, covar = bgsubtract(spectofit.ramanshift.data, spectofit.data, **kwargs)
-				# add the mask to the new `ramanmap` instance
-				map_mod.mask = mask
-			else:
-				map_mod.mask = fitmask
-				_, bg_values, coeff, _, mask, covar = bgsubtract(spectofit.ramanshift.data, spectofit.data, fitmask = map_mod.mask, **kwargs)
+			# check for submin
+            if submin:
+                map_mod.mapxr[:] -= map_mod.mapxr.min(dim='ramanshift') #Maybe in this way the individual minimum will be substracted from the spectra
+                #map_mod.mapxr[:] -= map_mod.mapxr.min() #The global minimum will be substracted.
+                coeff = 0
+                covar = 0
+            
+            else:
+                # check for fitmask
+                if fitmask is None:
+                    # take the spectrum at the middle of the map and fit the background
+                    spectofit = middle
+                    _, bg_values, coeff, _, mask, covar = bgsubtract(spectofit.ramanshift.data, spectofit.data, **kwargs)
+                    # add the mask to the new `ramanmap` instance
+                    map_mod.mask = mask
+                else:
+                    map_mod.mask = fitmask
+                    _, bg_values, coeff, _, mask, covar = bgsubtract(spectofit.ramanshift.data, spectofit.data, fitmask = map_mod.mask, **kwargs)
 
-			# extending bg_values to have two more axes, to allow adding to bg
-			bg_values = bg_values[:, np.newaxis, np.newaxis]
-			# subtract these along the ramanshift dimension of bg
-			map_mod.mapxr[:] -= bg_values
+                # extending bg_values to have two more axes, to allow adding to bg
+                bg_values = bg_values[:, np.newaxis, np.newaxis]
+                # subtract these along the ramanshift dimension of bg
+                map_mod.mapxr[:] -= bg_values
+            
 			# update the comments attribute if it exists
 			if hasattr(map_mod.mapxr, 'comments'):
 				map_mod.mapxr.attrs['comments'] += 'background subtracted - mode == const, background fit: middle spectrum \n'
